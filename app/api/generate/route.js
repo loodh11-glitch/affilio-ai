@@ -1,6 +1,17 @@
 import { NextResponse } from "next/server";
 
-const GEMINI_MODEL = "gemini-3-flash-preview";
+const GEMINI_MODELS = [
+  "gemini-3.1-flash-lite-preview",
+  "gemini-3.1-flash-lite",
+  "gemini-3.5-flash",
+  "gemini-2.5-flash-lite",
+];
+
+const RETRYABLE_STATUS_CODES = [429, 500, 502, 503, 504];
+
+function sleep(milliseconds) {
+  return new Promise((resolve) => setTimeout(resolve, milliseconds));
+}
 
 function detectStore(url = "", chosen = "") {
   if (chosen && chosen !== "تلقائي") {
@@ -29,12 +40,14 @@ function detectStore(url = "", chosen = "") {
   return "متجر عام";
 }
 
-function createDemoResult(body) {
+function createDemoResult(body, reason = "") {
   const product = body.productName || "المنتج المختار";
   const store = detectStore(body.productUrl, body.store);
 
   return {
     demo: true,
+    temporaryFallback: Boolean(reason),
+    fallbackReason: reason,
     product,
     store,
     score: 91,
@@ -110,46 +123,19 @@ function extractGeminiText(data) {
     .trim();
 }
 
-function removeMarkdownCodeBlock(text) {
-  return text
+function cleanJsonText(text) {
+  return String(text)
     .replace(/^```json\s*/i, "")
     .replace(/^```\s*/i, "")
     .replace(/\s*```$/i, "")
     .trim();
 }
 
-export async function POST(request) {
-  try {
-    const body = await request.json();
-
-    const productName = String(body.productName || "").trim();
-    const productUrl = String(body.productUrl || "").trim();
-
-    if (!productName && !productUrl) {
-      return NextResponse.json(
-        {
-          error: "أضيفي رابط المنتج أو اسم المنتج.",
-        },
-        {
-          status: 400,
-        }
-      );
-    }
-
-    const apiKey = process.env.GEMINI_API_KEY;
-
-    if (!apiKey) {
-      return NextResponse.json(createDemoResult(body));
-    }
-
-    const store = detectStore(productUrl, body.store);
-
-    const prompt = `
+function buildPrompt(body, store, productName, productUrl) {
+  return `
 أنت خبير تسويق أفلييت وSEO وصناعة محتوى للسوشيال ميديا.
 
 أنشئ حملة تسويقية احترافية للمنتج التالي.
-
-بيانات المنتج:
 
 اسم المنتج:
 ${productName || "غير متوفر"}
@@ -170,19 +156,17 @@ ${body.market || "السعودية"}
 ${body.language || "العربية"}
 
 تعليمات إلزامية:
-
 - لا تخترع سعرًا أو خصمًا أو تقييمًا.
 - لا تخترع مواصفات غير مذكورة.
 - لا تقل إن المنتج ترند كحقيقة مؤكدة.
-- لا تدّعي أنك فتحت الرابط أو قرأت الصفحة.
-- اجعل المحتوى طبيعيًا ومناسبًا للسوق المستهدف.
-- اجعل العناوين جذابة دون مبالغة أو تضليل.
-- أعد النتيجة بصيغة JSON صحيحة فقط.
+- لا تدّعي أنك فتحت الرابط أو قرأت صفحة المنتج.
+- اجعل المحتوى طبيعيًا ومناسبًا للسوق.
+- اجعل العناوين جذابة دون تضليل.
+- أعد JSON صحيحًا فقط.
 - لا تضع Markdown.
-- لا تضع علامات \`\`\`.
 - لا تضع أي شرح خارج JSON.
 
-أعد JSON بالمفاتيح التالية فقط:
+أعد JSON بهذه المفاتيح فقط:
 
 {
   "product": "اسم المنتج",
@@ -190,38 +174,38 @@ ${body.language || "العربية"}
   "score": 90,
   "scoreReason": "سبب مختصر للتقييم",
   "pinterestTitles": [
-    "عنوان Pinterest الأول",
-    "عنوان Pinterest الثاني",
-    "عنوان Pinterest الثالث",
-    "عنوان Pinterest الرابع",
-    "عنوان Pinterest الخامس"
+    "عنوان 1",
+    "عنوان 2",
+    "عنوان 3",
+    "عنوان 4",
+    "عنوان 5"
   ],
-  "pinterestDescription": "وصف Pinterest مناسب للبحث والحفظ",
-  "altText": "نص بديل واضح للصورة",
+  "pinterestDescription": "وصف Pinterest",
+  "altText": "النص البديل للصورة",
   "tiktokHooks": [
-    "هوك TikTok الأول",
-    "هوك TikTok الثاني",
-    "هوك TikTok الثالث",
-    "هوك TikTok الرابع",
-    "هوك TikTok الخامس"
+    "هوك 1",
+    "هوك 2",
+    "هوك 3",
+    "هوك 4",
+    "هوك 5"
   ],
-  "instagramCaption": "كابشن Instagram مع دعوة تفاعل مناسبة",
+  "instagramCaption": "كابشن Instagram",
   "keywords": [
-    "كلمة مفتاحية 1",
-    "كلمة مفتاحية 2",
-    "كلمة مفتاحية 3",
-    "كلمة مفتاحية 4",
-    "كلمة مفتاحية 5",
-    "كلمة مفتاحية 6",
-    "كلمة مفتاحية 7",
-    "كلمة مفتاحية 8",
-    "كلمة مفتاحية 9",
-    "كلمة مفتاحية 10",
-    "كلمة مفتاحية 11",
-    "كلمة مفتاحية 12",
-    "كلمة مفتاحية 13",
-    "كلمة مفتاحية 14",
-    "كلمة مفتاحية 15"
+    "كلمة 1",
+    "كلمة 2",
+    "كلمة 3",
+    "كلمة 4",
+    "كلمة 5",
+    "كلمة 6",
+    "كلمة 7",
+    "كلمة 8",
+    "كلمة 9",
+    "كلمة 10",
+    "كلمة 11",
+    "كلمة 12",
+    "كلمة 13",
+    "كلمة 14",
+    "كلمة 15"
   ],
   "analysis": "تحليل الجمهور والمنصة الأفضل وزاوية التسويق",
   "campaignPlan": [
@@ -235,93 +219,202 @@ ${body.language || "العربية"}
   ]
 }
 `;
+}
 
-    const endpoint =
-      `https://generativelanguage.googleapis.com/v1beta/models/` +
-      `${GEMINI_MODEL}:generateContent`;
+async function callGemini({ apiKey, model, prompt }) {
+  const endpoint =
+    `https://generativelanguage.googleapis.com/v1beta/models/` +
+    `${model}:generateContent`;
 
-    const response = await fetch(endpoint, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "x-goog-api-key": apiKey,
+  return fetch(endpoint, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "x-goog-api-key": apiKey,
+    },
+    body: JSON.stringify({
+      contents: [
+        {
+          role: "user",
+          parts: [{ text: prompt }],
+        },
+      ],
+      generationConfig: {
+        responseMimeType: "application/json",
+        temperature: 0.7,
+        maxOutputTokens: 4096,
       },
-      body: JSON.stringify({
-        contents: [
-          {
-            role: "user",
-            parts: [
-              {
-                text: prompt,
-              },
-            ],
-          },
-        ],
-        generationConfig: {
-          responseMimeType: "application/json",
-          maxOutputTokens: 4096,
-        },
-      }),
-    });
+    }),
+  });
+}
 
-    const data = await response.json();
+async function generateWithFallback({ apiKey, prompt }) {
+  const errors = [];
 
-    if (!response.ok) {
-      const errorMessage =
-        data?.error?.message ||
-        "تعذر الاتصال بخدمة Gemini حاليًا.";
+  for (const model of GEMINI_MODELS) {
+    for (let attempt = 0; attempt < 3; attempt += 1) {
+      try {
+        const response = await callGemini({
+          apiKey,
+          model,
+          prompt,
+        });
 
+        const data = await response.json();
+
+        if (response.ok) {
+          const text = extractGeminiText(data);
+
+          if (!text) {
+            errors.push(`${model}: رد فارغ`);
+            break;
+          }
+
+          return {
+            model,
+            text,
+          };
+        }
+
+        const message =
+          data?.error?.message ||
+          `تعذر استخدام الموديل ${model}.`;
+
+        errors.push(`${model}: ${message}`);
+
+        const retryable =
+          RETRYABLE_STATUS_CODES.includes(response.status);
+
+        if (!retryable) {
+          break;
+        }
+
+        if (attempt < 2) {
+          const delay = 1000 * 2 ** attempt;
+          await sleep(delay);
+        }
+      } catch (error) {
+        errors.push(
+          `${model}: ${error?.message || "خطأ في الاتصال"}`
+        );
+
+        if (attempt < 2) {
+          const delay = 1000 * 2 ** attempt;
+          await sleep(delay);
+        }
+      }
+    }
+  }
+
+  throw new Error(errors.join(" | "));
+}
+
+export async function POST(request) {
+  try {
+    const body = await request.json();
+
+    const productName = String(
+      body.productName || ""
+    ).trim();
+
+    const productUrl = String(
+      body.productUrl || ""
+    ).trim();
+
+    if (!productName && !productUrl) {
       return NextResponse.json(
         {
-          error: errorMessage,
+          error: "أضيفي رابط المنتج أو اسم المنتج.",
         },
         {
-          status: response.status || 500,
+          status: 400,
         }
       );
     }
 
-    const generatedText = extractGeminiText(data);
+    const apiKey = process.env.GEMINI_API_KEY;
 
-    if (!generatedText) {
+    if (!apiKey) {
       return NextResponse.json(
-        {
-          error: "لم تصل نتيجة من Gemini. أعيدي المحاولة.",
-        },
-        {
-          status: 502,
-        }
+        createDemoResult(
+          body,
+          "مفتاح Gemini غير مضاف إلى Vercel."
+        )
       );
     }
 
-    const cleanText = removeMarkdownCodeBlock(generatedText);
+    const store = detectStore(
+      productUrl,
+      body.store
+    );
+
+    const prompt = buildPrompt(
+      body,
+      store,
+      productName,
+      productUrl
+    );
+
+    let generated;
+
+    try {
+      generated = await generateWithFallback({
+        apiKey,
+        prompt,
+      });
+    } catch (error) {
+      console.error(
+        "All Gemini models failed:",
+        error
+      );
+
+      return NextResponse.json(
+        createDemoResult(
+          body,
+          "خدمة Gemini مزدحمة مؤقتًا؛ تم عرض نتيجة احتياطية."
+        )
+      );
+    }
+
+    const cleanText = cleanJsonText(
+      generated.text
+    );
 
     let result;
 
     try {
       result = JSON.parse(cleanText);
-    } catch (parseError) {
-      console.error("Gemini JSON parse error:", parseError);
-      console.error("Gemini response:", cleanText);
+    } catch (error) {
+      console.error(
+        "Gemini JSON parse error:",
+        error
+      );
+
+      console.error(
+        "Gemini response:",
+        cleanText
+      );
 
       return NextResponse.json(
-        {
-          error:
-            "وصلت نتيجة غير منظمة من Gemini. أعيدي المحاولة.",
-        },
-        {
-          status: 502,
-        }
+        createDemoResult(
+          body,
+          "تعذر قراءة رد Gemini؛ تم عرض نتيجة احتياطية."
+        )
       );
     }
 
     return NextResponse.json({
       ...result,
       demo: false,
+      temporaryFallback: false,
+      modelUsed: generated.model,
       store: result.store || store,
     });
   } catch (error) {
-    console.error("Generate route error:", error);
+    console.error(
+      "Generate route error:",
+      error
+    );
 
     return NextResponse.json(
       {
