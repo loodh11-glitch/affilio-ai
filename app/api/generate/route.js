@@ -1,9 +1,13 @@
 import { NextResponse } from "next/server";
 
-function detectStore(url = "", chosen = "") {
-  if (chosen && chosen !== "تلقائي") return chosen;
+const GEMINI_MODEL = "gemini-3-flash-preview";
 
-  const value = url.toLowerCase();
+function detectStore(url = "", chosen = "") {
+  if (chosen && chosen !== "تلقائي") {
+    return chosen;
+  }
+
+  const value = String(url).toLowerCase();
 
   const stores = [
     ["Amazon", ["amazon.", "amzn.to"]],
@@ -41,9 +45,12 @@ function createDemoResult(body) {
       `ليش ${product} من المنتجات الملفتة؟`,
       `${product}: اختيار مناسب لقائمة مشترياتك`,
       `منتج من ${store} يستحق المشاهدة`,
-      `احفظي هذا المنتج قبل ما تنسينه`,
+      "احفظي هذا المنتج قبل ما تنسينه",
     ],
-    pinterestDescription: `اكتشفي ${product} من ${store}. منتج مناسب لمحتوى التسوق والإلهام اليومي. احفظي المنشور للرجوع إليه واضغطي رابط الأفلييت لمشاهدة التفاصيل.`,
+    pinterestDescription:
+      `اكتشفي ${product} من ${store}. ` +
+      "منتج مناسب لمحتوى التسوق والإلهام اليومي. " +
+      "احفظي المنشور للرجوع إليه واضغطي رابط الأفلييت لمشاهدة التفاصيل.",
     altText: `صورة ${product} معروضة كاقتراح تسوق من ${store}.`,
     tiktokHooks: [
       "وقفي السكرول… هذا المنتج شدني من أول نظرة!",
@@ -75,7 +82,9 @@ ${product}
       "اكتشافات تسوق",
     ],
     analysis:
-      "الجمهور المقترح: المهتمات بالتسوق والمنتجات الجديدة.\nالمنصة الأقوى: Pinterest للمحتوى طويل العمر، ثم TikTok للاكتشاف السريع.\nزاوية التسويق: ركزي على الفائدة والشكل وسبب استحقاق المنتج للحفظ.",
+      "الجمهور المقترح: المهتمات بالتسوق والمنتجات الجديدة.\n" +
+      "المنصة الأقوى: Pinterest للمحتوى طويل العمر، ثم TikTok للاكتشاف السريع.\n" +
+      "زاوية التسويق: ركزي على الفائدة والشكل وسبب استحقاق المنتج للحفظ.",
     campaignPlan: [
       "اليوم 1: Pin بصورة المنتج وعنوان فضولي.",
       "اليوم 2: TikTok قصير بهوك سريع.",
@@ -89,25 +98,41 @@ ${product}
 }
 
 function extractGeminiText(data) {
-  return (
-    data?.candidates?.[0]?.content?.parts
-      ?.map((part) => part?.text || "")
-      .join("")
-      .trim() || ""
-  );
+  const parts = data?.candidates?.[0]?.content?.parts;
+
+  if (!Array.isArray(parts)) {
+    return "";
+  }
+
+  return parts
+    .map((part) => part?.text || "")
+    .join("")
+    .trim();
+}
+
+function removeMarkdownCodeBlock(text) {
+  return text
+    .replace(/^```json\s*/i, "")
+    .replace(/^```\s*/i, "")
+    .replace(/\s*```$/i, "")
+    .trim();
 }
 
 export async function POST(request) {
   try {
     const body = await request.json();
 
-    const productName = body.productName?.trim() || "";
-    const productUrl = body.productUrl?.trim() || "";
+    const productName = String(body.productName || "").trim();
+    const productUrl = String(body.productUrl || "").trim();
 
     if (!productName && !productUrl) {
       return NextResponse.json(
-        { error: "أضيفي رابط المنتج أو اسم المنتج." },
-        { status: 400 }
+        {
+          error: "أضيفي رابط المنتج أو اسم المنتج.",
+        },
+        {
+          status: 400,
+        }
       );
     }
 
@@ -122,7 +147,9 @@ export async function POST(request) {
     const prompt = `
 أنت خبير تسويق أفلييت وSEO وصناعة محتوى للسوشيال ميديا.
 
-أنشئ حملة تسويقية للمنتج التالي:
+أنشئ حملة تسويقية احترافية للمنتج التالي.
+
+بيانات المنتج:
 
 اسم المنتج:
 ${productName || "غير متوفر"}
@@ -139,17 +166,21 @@ ${body.benefit || "غير متوفرة"}
 السوق المستهدف:
 ${body.market || "السعودية"}
 
-اللغة:
+اللغة المطلوبة:
 ${body.language || "العربية"}
 
-التعليمات:
+تعليمات إلزامية:
+
 - لا تخترع سعرًا أو خصمًا أو تقييمًا.
 - لا تخترع مواصفات غير مذكورة.
 - لا تقل إن المنتج ترند كحقيقة مؤكدة.
-- اجعل المحتوى طبيعيًا ومناسبًا للسوق.
-- أعد النتيجة بصيغة JSON فقط.
+- لا تدّعي أنك فتحت الرابط أو قرأت الصفحة.
+- اجعل المحتوى طبيعيًا ومناسبًا للسوق المستهدف.
+- اجعل العناوين جذابة دون مبالغة أو تضليل.
+- أعد النتيجة بصيغة JSON صحيحة فقط.
 - لا تضع Markdown.
-- لا تضع أي كلام خارج JSON.
+- لا تضع علامات \`\`\`.
+- لا تضع أي شرح خارج JSON.
 
 أعد JSON بالمفاتيح التالية فقط:
 
@@ -157,92 +188,96 @@ ${body.language || "العربية"}
   "product": "اسم المنتج",
   "store": "اسم المتجر",
   "score": 90,
-  "scoreReason": "سبب التقييم",
+  "scoreReason": "سبب مختصر للتقييم",
   "pinterestTitles": [
-    "عنوان 1",
-    "عنوان 2",
-    "عنوان 3",
-    "عنوان 4",
-    "عنوان 5"
+    "عنوان Pinterest الأول",
+    "عنوان Pinterest الثاني",
+    "عنوان Pinterest الثالث",
+    "عنوان Pinterest الرابع",
+    "عنوان Pinterest الخامس"
   ],
-  "pinterestDescription": "وصف Pinterest",
-  "altText": "النص البديل للصورة",
+  "pinterestDescription": "وصف Pinterest مناسب للبحث والحفظ",
+  "altText": "نص بديل واضح للصورة",
   "tiktokHooks": [
-    "هوك 1",
-    "هوك 2",
-    "هوك 3",
-    "هوك 4",
-    "هوك 5"
+    "هوك TikTok الأول",
+    "هوك TikTok الثاني",
+    "هوك TikTok الثالث",
+    "هوك TikTok الرابع",
+    "هوك TikTok الخامس"
   ],
-  "instagramCaption": "كابشن Instagram",
+  "instagramCaption": "كابشن Instagram مع دعوة تفاعل مناسبة",
   "keywords": [
-    "كلمة 1",
-    "كلمة 2",
-    "كلمة 3",
-    "كلمة 4",
-    "كلمة 5",
-    "كلمة 6",
-    "كلمة 7",
-    "كلمة 8",
-    "كلمة 9",
-    "كلمة 10",
-    "كلمة 11",
-    "كلمة 12",
-    "كلمة 13",
-    "كلمة 14",
-    "كلمة 15"
+    "كلمة مفتاحية 1",
+    "كلمة مفتاحية 2",
+    "كلمة مفتاحية 3",
+    "كلمة مفتاحية 4",
+    "كلمة مفتاحية 5",
+    "كلمة مفتاحية 6",
+    "كلمة مفتاحية 7",
+    "كلمة مفتاحية 8",
+    "كلمة مفتاحية 9",
+    "كلمة مفتاحية 10",
+    "كلمة مفتاحية 11",
+    "كلمة مفتاحية 12",
+    "كلمة مفتاحية 13",
+    "كلمة مفتاحية 14",
+    "كلمة مفتاحية 15"
   ],
-  "analysis": "تحليل الجمهور والمنصة وزاوية التسويق",
+  "analysis": "تحليل الجمهور والمنصة الأفضل وزاوية التسويق",
   "campaignPlan": [
-    "اليوم 1",
-    "اليوم 2",
-    "اليوم 3",
-    "اليوم 4",
-    "اليوم 5",
-    "اليوم 6",
-    "اليوم 7"
+    "خطة اليوم 1",
+    "خطة اليوم 2",
+    "خطة اليوم 3",
+    "خطة اليوم 4",
+    "خطة اليوم 5",
+    "خطة اليوم 6",
+    "خطة اليوم 7"
   ]
 }
 `;
 
-    const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${encodeURIComponent(
-        apiKey
-      )}`,
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          contents: [
-            {
-              role: "user",
-              parts: [
-                {
-                  text: prompt,
-                },
-              ],
-            },
-          ],
-          generationConfig: {
-            responseMimeType: "application/json",
-            temperature: 0.7,
-            maxOutputTokens: 4096,
+    const endpoint =
+      `https://generativelanguage.googleapis.com/v1beta/models/` +
+      `${GEMINI_MODEL}:generateContent`;
+
+    const response = await fetch(endpoint, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "x-goog-api-key": apiKey,
+      },
+      body: JSON.stringify({
+        contents: [
+          {
+            role: "user",
+            parts: [
+              {
+                text: prompt,
+              },
+            ],
           },
-        }),
-      }
-    );
+        ],
+        generationConfig: {
+          responseMimeType: "application/json",
+          maxOutputTokens: 4096,
+        },
+      }),
+    });
 
     const data = await response.json();
 
     if (!response.ok) {
       const errorMessage =
-        data?.error?.message || "تعذر الاتصال بخدمة Gemini.";
+        data?.error?.message ||
+        "تعذر الاتصال بخدمة Gemini حاليًا.";
 
       return NextResponse.json(
-        { error: errorMessage },
-        { status: response.status || 500 }
+        {
+          error: errorMessage,
+        },
+        {
+          status: response.status || 500,
+        }
       );
     }
 
@@ -250,19 +285,33 @@ ${body.language || "العربية"}
 
     if (!generatedText) {
       return NextResponse.json(
-        { error: "لم تصل نتيجة من Gemini. أعيدي المحاولة." },
-        { status: 502 }
+        {
+          error: "لم تصل نتيجة من Gemini. أعيدي المحاولة.",
+        },
+        {
+          status: 502,
+        }
       );
     }
+
+    const cleanText = removeMarkdownCodeBlock(generatedText);
 
     let result;
 
     try {
-      result = JSON.parse(generatedText);
-    } catch {
+      result = JSON.parse(cleanText);
+    } catch (parseError) {
+      console.error("Gemini JSON parse error:", parseError);
+      console.error("Gemini response:", cleanText);
+
       return NextResponse.json(
-        { error: "وصلت نتيجة غير منظمة من Gemini. أعيدي المحاولة." },
-        { status: 502 }
+        {
+          error:
+            "وصلت نتيجة غير منظمة من Gemini. أعيدي المحاولة.",
+        },
+        {
+          status: 502,
+        }
       );
     }
 
@@ -272,11 +321,17 @@ ${body.language || "العربية"}
       store: result.store || store,
     });
   } catch (error) {
+    console.error("Generate route error:", error);
+
     return NextResponse.json(
       {
-        error: error?.message || "حدث خطأ غير متوقع.",
+        error:
+          error?.message ||
+          "حدث خطأ غير متوقع أثناء إنشاء الحملة.",
       },
-      { status: 500 }
+      {
+        status: 500,
+      }
     );
   }
 }
