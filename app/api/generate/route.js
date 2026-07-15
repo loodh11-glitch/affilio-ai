@@ -2,8 +2,10 @@ import { NextResponse } from "next/server";
 
 function detectStore(url = "", chosen = "") {
   if (chosen && chosen !== "تلقائي") return chosen;
+
   const value = url.toLowerCase();
-  const rules = [
+
+  const stores = [
     ["Amazon", ["amazon.", "amzn.to"]],
     ["SHEIN", ["shein.", "onelink.shein.com"]],
     ["AliExpress", ["aliexpress.", "s.click.aliexpress.com"]],
@@ -11,114 +13,270 @@ function detectStore(url = "", chosen = "") {
     ["Noon", ["noon."]],
     ["Etsy", ["etsy."]],
     ["eBay", ["ebay."]],
-    ["Walmart", ["walmart."]]
+    ["Walmart", ["walmart."]],
   ];
-  for (const [name, domains] of rules) {
-    if (domains.some((domain) => value.includes(domain))) return name;
+
+  for (const [name, domains] of stores) {
+    if (domains.some((domain) => value.includes(domain))) {
+      return name;
+    }
   }
+
   return "متجر عام";
 }
 
-function demo(body) {
+function createDemoResult(body) {
   const product = body.productName || "المنتج المختار";
   const store = detectStore(body.productUrl, body.store);
+
   return {
     demo: true,
     product,
     store,
     score: 91,
-    scoreReason: `منتج بصري مناسب لمحتوى الاكتشاف والتسوق، مع فرصة جيدة على Pinterest وTikTok ضمن سوق ${body.market || "المستهدف"}.`,
+    scoreReason:
+      "منتج مناسب لمحتوى التسوق والاكتشاف، مع فرصة جيدة على Pinterest وTikTok.",
     pinterestTitles: [
-      `${product} — اكتشاف أنيق يستحق الحفظ`,
-      `ليش ${product} صار من المنتجات الملفتة؟`,
+      `${product} — اكتشاف يستحق الحفظ`,
+      `ليش ${product} من المنتجات الملفتة؟`,
       `${product}: اختيار مناسب لقائمة مشترياتك`,
-      `منتج ترند من ${store} يستحق المشاهدة`,
-      `احفظي هذا المنتج قبل ما تنسينه`
+      `منتج من ${store} يستحق المشاهدة`,
+      `احفظي هذا المنتج قبل ما تنسينه`,
     ],
-    pinterestDescription: `اكتشفي ${product} من ${store}. منتج مناسب لمحتوى التسوق والإلهام اليومي. احفظي المنشور للرجوع إليه واضغطي رابط الأفلييت لمشاهدة التفاصيل المتاحة.`,
+    pinterestDescription: `اكتشفي ${product} من ${store}. منتج مناسب لمحتوى التسوق والإلهام اليومي. احفظي المنشور للرجوع إليه واضغطي رابط الأفلييت لمشاهدة التفاصيل.`,
     altText: `صورة ${product} معروضة كاقتراح تسوق من ${store}.`,
     tiktokHooks: [
       "وقفي السكرول… هذا المنتج شدني من أول نظرة!",
-      `لقيت لكم ${product} وأحس بيصير ترند.`,
-      "القطعة اللي ترفع الإطلالة بدون مجهود ✨",
+      `لقيت لكم ${product} وأحس يستحق المشاهدة.`,
       "هذا من الاكتشافات اللي تنحفظ فورًا.",
-      "هل يستحق الشراء؟ شوفوا التفاصيل أول."
+      "هل يستحق الشراء؟ شوفوا التفاصيل أول.",
+      "منتج بسيط لكن ممكن يفرق معك كثير.",
     ],
-    instagramCaption: `اكتشاف اليوم ✨\n${product}\nاختيار ملفت وسهل تقديمه ضمن تنسيقات ومحتوى تسوق. هل تضيفينه لقائمة مشترياتك؟`,
-    keywords: [product, `${product} ${store}`, "اكتشافات أفلييت", "منتجات ترند", "أفكار تسوق", "عروض أونلاين", "منتجات تستحق", "محتوى Pinterest", "تسوق نسائي", "مشتريات أونلاين", "تنسيقات", "منتج اليوم", "رابط أفلييت", "أفضل المنتجات", "توصيات تسوق"],
-    analysis: `الجمهور المقترح: مهتمات بالتسوق والموضة والمنتجات الرائجة.\nالمنصة الأقوى: Pinterest للمحتوى طويل العمر، ثم TikTok للاكتشاف السريع.\nزاوية التسويق: ركزي على الشكل، سهولة الاستخدام، ولماذا يستحق الحفظ.`,
+    instagramCaption: `اكتشاف اليوم ✨
+
+${product}
+
+اختيار ملفت ومناسب لمحتوى التسوق. هل تضيفينه لقائمة مشترياتك؟`,
+    keywords: [
+      product,
+      `${product} ${store}`,
+      "منتجات أفلييت",
+      "أفكار تسوق",
+      "منتجات تستحق",
+      "محتوى Pinterest",
+      "تسوق أونلاين",
+      "مشتريات أونلاين",
+      "منتج اليوم",
+      "رابط أفلييت",
+      "أفضل المنتجات",
+      "توصيات تسوق",
+      "منتجات رائجة",
+      "عروض أونلاين",
+      "اكتشافات تسوق",
+    ],
+    analysis:
+      "الجمهور المقترح: المهتمات بالتسوق والمنتجات الجديدة.\nالمنصة الأقوى: Pinterest للمحتوى طويل العمر، ثم TikTok للاكتشاف السريع.\nزاوية التسويق: ركزي على الفائدة والشكل وسبب استحقاق المنتج للحفظ.",
     campaignPlan: [
       "اليوم 1: Pin بصورة المنتج وعنوان فضولي.",
-      "اليوم 2: TikTok قصير بهوك سريع وتفاصيل المنتج.",
+      "اليوم 2: TikTok قصير بهوك سريع.",
       "اليوم 3: Instagram Reel مع سؤال تفاعلي.",
       "اليوم 4: Pin ثانٍ بكلمة مفتاحية مختلفة.",
-      "اليوم 5: Story مع تصويت: يستحق أو لا؟",
-      "اليوم 6: منشور مقارنة أو تنسيق.",
-      "اليوم 7: إعادة نشر أفضل زاوية مع CTA للرابط."
-    ]
+      "اليوم 5: Story مع تصويت.",
+      "اليوم 6: منشور مقارنة أو استخدام.",
+      "اليوم 7: إعادة نشر أفضل زاوية مع دعوة للرابط.",
+    ],
   };
 }
 
-function clean(text) {
-  return text.replace(/^```json\s*/i, "").replace(/```$/i, "").trim();
+function extractGeminiText(data) {
+  return (
+    data?.candidates?.[0]?.content?.parts
+      ?.map((part) => part?.text || "")
+      .join("")
+      .trim() || ""
+  );
 }
 
 export async function POST(request) {
   try {
     const body = await request.json();
-    if (!body.productName?.trim() && !body.productUrl?.trim()) {
-      return NextResponse.json({ error: "أضيفي رابط المنتج أو اسمه." }, { status: 400 });
+
+    const productName = body.productName?.trim() || "";
+    const productUrl = body.productUrl?.trim() || "";
+
+    if (!productName && !productUrl) {
+      return NextResponse.json(
+        { error: "أضيفي رابط المنتج أو اسم المنتج." },
+        { status: 400 }
+      );
     }
 
-    const key = process.env.OPENAI_API_KEY;
-    if (!key) return NextResponse.json(demo(body));
+    const apiKey = process.env.GEMINI_API_KEY;
 
-    const store = detectStore(body.productUrl, body.store);
-    const prompt = `أنت خبير تسويق أفلييت وSEO. أنشئ محتوى دقيقًا وقابلًا للنشر للمنتج التالي:
-اسم المنتج: ${body.productName || "غير متوفر"}
-الرابط: ${body.productUrl || "غير متوفر"}
-المتجر: ${store}
-الفائدة: ${body.benefit || "استنتجها دون اختلاق مواصفات"}
-السوق: ${body.market}
-اللغة: ${body.language}
+    if (!apiKey) {
+      return NextResponse.json(createDemoResult(body));
+    }
 
-أعد JSON فقط بهذه المفاتيح:
-product string
-score number
-scoreReason string
-pinterestTitles array من 5
-pinterestDescription string
-altText string
-tiktokHooks array من 5
-instagramCaption string
-keywords array من 15
-analysis string
-campaignPlan array من 7
+    const store = detectStore(productUrl, body.store);
 
-لا تخترع سعرًا أو خصمًا أو تقييمًا أو مواصفات غير معروفة. لا تغيّر رابط الأفلييت.`;
+    const prompt = `
+أنت خبير تسويق أفلييت وSEO وصناعة محتوى للسوشيال ميديا.
 
-    const response = await fetch("https://api.openai.com/v1/responses", {
-      method: "POST",
-      headers: {
-        "Authorization": `Bearer ${key}`,
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify({
-        model: process.env.OPENAI_MODEL || "gpt-5-mini",
-        input: prompt,
-        text: { format: { type: "json_object" } }
-      })
-    });
+أنشئ حملة تسويقية للمنتج التالي:
+
+اسم المنتج:
+${productName || "غير متوفر"}
+
+رابط الأفلييت:
+${productUrl || "غير متوفر"}
+
+المتجر:
+${store}
+
+أهم فائدة:
+${body.benefit || "غير متوفرة"}
+
+السوق المستهدف:
+${body.market || "السعودية"}
+
+اللغة:
+${body.language || "العربية"}
+
+التعليمات:
+- لا تخترع سعرًا أو خصمًا أو تقييمًا.
+- لا تخترع مواصفات غير مذكورة.
+- لا تقل إن المنتج ترند كحقيقة مؤكدة.
+- اجعل المحتوى طبيعيًا ومناسبًا للسوق.
+- أعد النتيجة بصيغة JSON فقط.
+- لا تضع Markdown.
+- لا تضع أي كلام خارج JSON.
+
+أعد JSON بالمفاتيح التالية فقط:
+
+{
+  "product": "اسم المنتج",
+  "store": "اسم المتجر",
+  "score": 90,
+  "scoreReason": "سبب التقييم",
+  "pinterestTitles": [
+    "عنوان 1",
+    "عنوان 2",
+    "عنوان 3",
+    "عنوان 4",
+    "عنوان 5"
+  ],
+  "pinterestDescription": "وصف Pinterest",
+  "altText": "النص البديل للصورة",
+  "tiktokHooks": [
+    "هوك 1",
+    "هوك 2",
+    "هوك 3",
+    "هوك 4",
+    "هوك 5"
+  ],
+  "instagramCaption": "كابشن Instagram",
+  "keywords": [
+    "كلمة 1",
+    "كلمة 2",
+    "كلمة 3",
+    "كلمة 4",
+    "كلمة 5",
+    "كلمة 6",
+    "كلمة 7",
+    "كلمة 8",
+    "كلمة 9",
+    "كلمة 10",
+    "كلمة 11",
+    "كلمة 12",
+    "كلمة 13",
+    "كلمة 14",
+    "كلمة 15"
+  ],
+  "analysis": "تحليل الجمهور والمنصة وزاوية التسويق",
+  "campaignPlan": [
+    "اليوم 1",
+    "اليوم 2",
+    "اليوم 3",
+    "اليوم 4",
+    "اليوم 5",
+    "اليوم 6",
+    "اليوم 7"
+  ]
+}
+`;
+
+    const response = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${encodeURIComponent(
+        apiKey
+      )}`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          contents: [
+            {
+              role: "user",
+              parts: [
+                {
+                  text: prompt,
+                },
+              ],
+            },
+          ],
+          generationConfig: {
+            responseMimeType: "application/json",
+            temperature: 0.7,
+            maxOutputTokens: 4096,
+          },
+        }),
+      }
+    );
 
     const data = await response.json();
+
     if (!response.ok) {
-      return NextResponse.json({ error: data?.error?.message || "تعذر الاتصال بالذكاء الاصطناعي." }, { status: 500 });
+      const errorMessage =
+        data?.error?.message || "تعذر الاتصال بخدمة Gemini.";
+
+      return NextResponse.json(
+        { error: errorMessage },
+        { status: response.status || 500 }
+      );
     }
 
-    const output = data.output_text || data.output?.flatMap((x) => x.content || []).find((x) => x.type === "output_text")?.text;
-    if (!output) throw new Error("لم يصل رد من النموذج.");
-    return NextResponse.json(JSON.parse(clean(output)));
+    const generatedText = extractGeminiText(data);
+
+    if (!generatedText) {
+      return NextResponse.json(
+        { error: "لم تصل نتيجة من Gemini. أعيدي المحاولة." },
+        { status: 502 }
+      );
+    }
+
+    let result;
+
+    try {
+      result = JSON.parse(generatedText);
+    } catch {
+      return NextResponse.json(
+        { error: "وصلت نتيجة غير منظمة من Gemini. أعيدي المحاولة." },
+        { status: 502 }
+      );
+    }
+
+    return NextResponse.json({
+      ...result,
+      demo: false,
+      store: result.store || store,
+    });
   } catch (error) {
-    return NextResponse.json({ error: error.message || "حدث خطأ غير متوقع." }, { status: 500 });
+    return NextResponse.json(
+      {
+        error: error?.message || "حدث خطأ غير متوقع.",
+      },
+      { status: 500 }
+    );
   }
 }
