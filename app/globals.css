@@ -495,5 +495,232 @@ footer{
   .campaign-form{
     padding:22px;
   }
+  
 
+}
+/* ===== تحسينات Affilio AI للجوال ===== */
+
+@media (max-width: 700px) {
+  .site {
+    width: 100%;
+    padding: 0 18px;
+    overflow: hidden;
+  }
+
+  .top-nav {
+    width: 100%;
+    padding: 24px 0;
+    direction: rtl;
+  }
+
+  .brand {
+    gap: 10px;
+  }
+
+  .brand-logo {
+    width: 48px;
+    height: 48px;
+    flex-shrink: 0;
+  }
+
+  .brand strong {
+    font-size: 20px;
+  }
+
+  .brand small {
+    font-size: 12px;
+  }
+
+  .version-badge {
+    font-size: 14px;
+    padding: 9px 15px;
+  }
+
+  .hero-section {
+    width: 100%;
+    margin-top: 18px;
+    grid-template-columns: 1fr;
+    gap: 34px;
+  }
+
+  .hero-content {
+    text-align: center;
+  }
+
+  .hero-label {
+    font-size: 14px;
+    padding: 10px 16px;
+  }
+
+  .hero-content h1 {
+    font-size: 43px;
+    line-height: 1.18;
+    letter-spacing: -1px;
+    margin-top: 22px;
+  }
+
+  .hero-content p {
+    font-size: 17px;
+    line-height: 2;
+    padding: 0 4px;
+  }
+
+  .supported-stores {
+    justify-content: center;
+    gap: 10px;
+  }
+
+  .supported-stores span {
+    min-width: 105px;
+    padding: 12px 15px;
+    text-align: center;
+    font-size: 14px;
+  }
+
+  .campaign-form {
+    width: 100%;
+    padding: 24px 20px;
+    border-radius: 25px;
+  }
+
+  .form-heading {
+    align-items: flex-start;
+  }
+
+  .form-heading > span {
+    flex-shrink: 0;
+  }
+
+  .form-heading h2 {
+    font-size: 25px;
+  }
+
+  .form-heading p {
+    font-size: 15px;
+    line-height: 1.7;
+  }
+
+  .field {
+    margin-bottom: 20px;
+  }
+
+  .field > span {
+    font-size: 16px;
+    margin-bottom: 9px;
+  }
+
+  .field small {
+    font-size: 12px;
+    line-height: 1.6;
+  }
+
+  .field input,
+  .field select {
+    min-height: 58px;
+    padding: 15px 16px;
+    font-size: 16px;
+    border-radius: 15px;
+  }
+
+  .field input::placeholder {
+    font-size: 14px;
+  }
+
+  .form-grid {
+    grid-template-columns: 1fr;
+    gap: 0;
+  }
+
+  .generate-button {
+    min-height: 60px;
+    margin-top: 5px;
+    border-radius: 17px;
+    font-size: 18px;
+  }
+
+  .privacy-note {
+    font-size: 12px;
+    line-height: 1.7;
+  }
+
+  .quick-features {
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    margin: 35px 0 50px;
+  }
+
+  .quick-features article {
+    padding: 20px 10px;
+  }
+
+  .quick-features strong {
+    font-size: 29px;
+  }
+
+  .quick-features span {
+    font-size: 13px;
+  }
+
+  .campaign-results {
+    width: 100%;
+    margin: 45px 0;
+  }
+
+  .results-heading {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .secondary-button {
+    width: 100%;
+    min-height: 48px;
+  }
+
+  .product-card {
+    grid-template-columns: 1fr;
+    text-align: center;
+    padding: 22px 17px;
+  }
+
+  .product-card img,
+  .product-placeholder {
+    width: 150px;
+    height: 150px;
+    margin: auto;
+  }
+
+  .product-meta {
+    justify-content: center;
+  }
+
+  .product-score {
+    margin: auto;
+  }
+
+  .result-tabs {
+    padding-bottom: 6px;
+  }
+
+  .result-tabs button {
+    min-height: 44px;
+    font-size: 14px;
+  }
+
+  .result-card {
+    padding: 20px 17px;
+  }
+
+  .result-card-heading {
+    gap: 12px;
+  }
+
+  .result-list {
+    padding-right: 22px;
+  }
+
+  .result-list li,
+  .result-text {
+    font-size: 16px;
+    line-height: 1.95;
+  }
 }
